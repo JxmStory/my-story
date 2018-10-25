@@ -50,7 +50,7 @@ spring:
 
 mybatis:
   mapper-locations: classpath:mapper/*.xml
-  type-aliases-package: cn.luischen.model
+  type-aliases-package: com.sh.model
 
 
 #pagehelper
@@ -63,7 +63,7 @@ pagehelper:
 
 logging:
   level:
-    cn.luischen.dao : DEBUG
+    com.sh.dao : DEBUG
 
 swagger:
   show: true

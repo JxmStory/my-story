@@ -6,7 +6,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.cache.annotation.EnableCaching;
 
 @SpringBootApplication
-@MapperScan("cn.luischen.dao")
+@MapperScan("com.sh.dao")
 @EnableCaching
 public class JxmStoryApplication {
 
