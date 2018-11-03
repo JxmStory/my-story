@@ -1,5 +1,6 @@
 package com.sh.controller.admin;
 
+import com.github.pagehelper.PageInfo;
 import com.sh.api.QiniuCloudService;
 import com.sh.constant.ErrorConstant;
 import com.sh.constant.Types;
@@ -10,18 +11,21 @@ import com.sh.model.AttAchDomain;
 import com.sh.model.UserDomain;
 import com.sh.service.attach.AttAchService;
 import com.sh.utils.APIResponse;
+
 import com.sh.utils.Commons;
+import com.sh.utils.ImgUtill;
 import com.sh.utils.TaleUtils;
-import com.github.pagehelper.PageInfo;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiParam;
+import org.apache.commons.fileupload.disk.DiskFileItem;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.multipart.commons.CommonsMultipartFile;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -177,43 +181,67 @@ public class AttAchController {
                                   HttpServletRequest request,
                                   HttpServletResponse response) throws Exception{
 
-        //文件上传
+        //文件存在
         if (files != null) {
+            //遍历图片
             for (MultipartFile file : files) {
+                //定义上传文件路径、文件名、文件格式
                 java.util.Date Datenow=new java.util.Date();//获取当前日期
                 java.text.SimpleDateFormat formatter = new java.text.SimpleDateFormat("yyyyMMdd");
                 String nowdate = formatter.format(Datenow).substring(0,6); //将日期格式化
+                //服务器真实路径
                 String realDirectory = WebConst.FILE_REAL_PATH + nowdate;
+                //原文件名
                 String fileName = file.getOriginalFilename();
+                //文件类型
                 String fileType="";
                 if (fileName.substring(fileName.length()-4).equals("jpeg")) {
                     fileType=".jpeg";
                 }else{
                     fileType = fileName.substring(fileName.length()-3);
                 }
-                String filename = System.currentTimeMillis() + "." + fileType;//对文件进行重新命名
-                File fi = new File(realDirectory);
-                try {
-                    if (!fi.isDirectory()) { // 如果文件夹不存在就新建
-                        fi.mkdirs();
+                //对文件进行重新命名
+                String filename = System.currentTimeMillis() + "." + fileType;
+
+                //文件上传
+                if(file.getSize()>1024*1024*5){
+                    //大于10M 压缩上传
+                    //创建临时文件 将原文件file放入临时文件temFile
+                    File temFile =  File.createTempFile("temp", "." + fileType);
+                    file.transferTo(temFile);
+
+                    String filedir = realDirectory+"/" + filename; // 以系统时间作为上传文件名称，设置上传文件的完整路径
+                    ImgUtill.compressImage(temFile.getAbsolutePath(), filedir);
+
+                    temFile.deleteOnExit(); // 令临时文件在JVM关闭的时候自动删除
+                    temFile.delete(); // 立刻删除临时文件
+                } else {
+                    //普通上传
+                    File fi = new File(realDirectory);
+                    try {
+                        if (!fi.isDirectory()) { // 如果文件夹不存在就新建
+                            fi.mkdirs();
+                        }
+                        File fie = new File(realDirectory, filename);
+                        file.transferTo(fie);
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                        throw BusinessException.withErrorCode(ErrorConstant.Att.UPLOAD_FILE_FAIL)
+                                .withErrorMessageArguments(e.getMessage());
                     }
-                    File fie = new File(realDirectory, filename);
-                    file.transferTo(fie);
-                    AttAchDomain attAch = new AttAchDomain();
-                    HttpSession session = request.getSession();
-                    UserDomain sessionUser = (UserDomain) session.getAttribute(WebConst.LOGIN_SESSION_KEY);
-                    attAch.setAuthorId(sessionUser.getUid());
-                    System.out.println();
-//                    attAch.setFtype(TaleUtils.isImage(file.getInputStream()) ? Types.IMAGE.getType() : Types.FILE.getType());
-                    attAch.setFtype(Types.IMAGE.getType());
-                    attAch.setFname(fileName);
-                    attAch.setFkey(WebConst.FILE_DIRECTORY + nowdate + "/" +filename);
-                    attAchService.addAttAch(attAch);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                    throw BusinessException.withErrorCode(ErrorConstant.Att.UPLOAD_FILE_FAIL)
-                            .withErrorMessageArguments(e.getMessage());
                 }
+
+                //保存信息
+                AttAchDomain attAch = new AttAchDomain();
+                HttpSession session = request.getSession();
+                UserDomain sessionUser = (UserDomain) session.getAttribute(WebConst.LOGIN_SESSION_KEY);
+                attAch.setAuthorId(sessionUser.getUid());
+                System.out.println();
+//                    attAch.setFtype(TaleUtils.isImage(file.getInputStream()) ? Types.IMAGE.getType() : Types.FILE.getType());
+                attAch.setFtype(Types.IMAGE.getType());
+                attAch.setFname(fileName);
+                attAch.setFkey(WebConst.FILE_DIRECTORY + nowdate + "/" +filename);
+                attAchService.addAttAch(attAch);
 
             }
             return APIResponse.success();

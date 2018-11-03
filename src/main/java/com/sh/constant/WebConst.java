@@ -54,9 +54,9 @@ public class WebConst {
     public static final int HIT_EXCEED = 10;
 
     /**
-     * 上传文件最大1M
+     * 上传文件最大5M
      */
-    public static Integer MAX_FILE_SIZE = 1048576;
+    public static Integer MAX_FILE_SIZE = 1024*1024*5;
 
     //服务器真实地址(linux根目录需要以/开头)
     public static String FILE_REAL_PATH = "/www/server/apache-tomcat-8.5.32/webapps/jxmstory/uploadfile/";
