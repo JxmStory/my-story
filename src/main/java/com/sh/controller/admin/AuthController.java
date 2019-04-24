@@ -62,8 +62,7 @@ public class AuthController extends BaseController {
             String password,
             @ApiParam(name = "remeber_me", value = "记住我", required = false)
             @RequestParam(name = "remeber_me", required = false)
-            String remeber_me
-    ){
+            String remeber_me){
         Integer error_count = cache.get("login_error_count");
         try {
             UserDomain userInfo = userService.login(username, password);
